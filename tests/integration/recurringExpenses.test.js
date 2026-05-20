@@ -172,6 +172,29 @@ describe('Scenario 3 — LD flag disabled mid-session', () => {
   });
 });
 
+// Spec: GET /expenses includes generated child rows with recurringTemplateId while flag is on.
+describe('GET /expenses includes child rows with recurringTemplateId when flag is on', () => {
+  it('should include a pending child row with recurringTemplateId and period fields', async () => {
+    _override(FLAGS.RECURRING_EXPENSES, true);
+
+    const { body: template } = await request(app)
+      .post('/api/recurring-expenses')
+      .send(VALID_TEMPLATE);
+
+    const { body: child } = await request(app)
+      .post(`/api/recurring-expenses/${template.id}/generate`);
+
+    const { status, body: expenses } = await request(app).get('/api/expenses');
+    expect(status).toBe(200);
+
+    const childRow = expenses.find(e => e.id === child.id);
+    expect(childRow).toBeDefined();
+    expect(childRow.status).toBe('pending');
+    expect(childRow.recurringTemplateId).toBe(template.id);
+    expect(typeof childRow.period).toBe('string');
+  });
+});
+
 // Scenario 4: endDate on active template stops generation from that date forward.
 describe('Scenario 4 — endDate stops generation', () => {
   it('should return 422 when the next due date is after endDate', async () => {
